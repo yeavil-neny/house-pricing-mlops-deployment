@@ -27,7 +27,7 @@ jobs:
       # Requisito del profesor: Simular la obtención dinámica del artefacto.
       # En este paso, si no tienes el bucket real encendido aún, creamos un bypass 
       # para que el test unitario no falle por falta del archivo de inferencia.
-       cruel-mock-model:
+      - name: Cruel Mock Model
         run: |
           if [ ! -f "model_house_pricing.onnx" ]; then
             echo "Simulando descarga dinámica de artefacto desde almacenamiento..."
@@ -73,7 +73,7 @@ jobs:
         run: |
           gcloud run deploy house-pricing-api-dev \
             --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/house-pricing-repo/api-dev:latest \
-            --region us-central1-region \
+            --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars ENVIRONMENT=dev
