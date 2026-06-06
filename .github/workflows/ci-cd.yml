@@ -87,3 +87,4 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars ENVIRONMENT=dev
+# Forzar ejecucion del pipeline con permisos corregidos
