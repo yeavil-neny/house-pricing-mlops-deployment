@@ -4,8 +4,8 @@ import numpy as np
 import onnxruntime as ort
 import os
 
-LOCAL_DATA_PATH = "/tmp/test_data.csv"
-LOCAL_MODEL_PATH = "/tmp/model_house_pricing.onnx"
+LOCAL_DATA_PATH = "./test_data.csv"
+LOCAL_MODEL_PATH = "./model_house_pricing.onnx"
 
 def test_artifacts_exist():
     """Verifica que el pipeline descargó los artefactos correctamente desde GCS"""
