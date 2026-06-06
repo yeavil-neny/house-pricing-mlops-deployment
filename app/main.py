@@ -6,41 +6,55 @@ import os
 from datetime import datetime
 from google.cloud import storage
 
-app = FastAPI(title="House Pricing Inference API - GCP Cloud Native")
+app = FastAPI(title="House Pricing Inference API - MLOps Production")
 
-# Configuración del entorno y almacenamiento centralizado
+# Configuración del entorno
+ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
 BUCKET_NAME = "house-pricing-mlops-artifacts-dev"
 MODEL_BLOB_PATH = "models/model_house_pricing.onnx"
 LOCAL_MODEL_PATH = "/tmp/model_house_pricing.onnx"
 
-# Variables globales para el modelo
+# El nombre del archivo de logs cambia dinámicamente según la rúbrica
+LOG_BLOB_PATH = f"logs/predicciones_{ENVIRONMENT}.txt"
+
 session = None
 input_name = None
 
 def download_model_from_gcs():
-    """Descarga dinámicamente el modelo desde el Bucket de Google Cloud"""
+    """Descarga el modelo ONNX real desde GCS en tiempo de ejecución"""
     try:
-        print(f"🔄 Conectando a GCP para descargar el modelo desde el bucket: {BUCKET_NAME}...")
         storage_client = storage.Client()
         bucket = storage_client.bucket(BUCKET_NAME)
         blob = bucket.blob(MODEL_BLOB_PATH)
-        
-        # Guardar en la carpeta /tmp (estándar seguro para entornos serverless)
         blob.download_to_filename(LOCAL_MODEL_PATH)
-        print("✅ Modelo ONNX descargado exitosamente en el entorno temporal.")
+        print("✅ Modelo ONNX descargado exitosamente de GCS.")
     except Exception as e:
-        print(f"❌ Error crítico al descargar el modelo desde GCS: {e}")
+        print(f"❌ Error descargando modelo: {e}")
         raise e
+
+def append_log_to_gcs(log_entry: str):
+    """Agrega una nueva línea de predicción al archivo TXT correspondiente en el bucket"""
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(LOG_BLOB_PATH)
+        
+        # Descargar contenido existente si ya existe, para no borrar el historial
+        existing_content = ""
+        if blob.exists():
+            existing_content = blob.download_as_text()
+        
+        # Concatenar la nueva predicción
+        new_content = existing_content + log_entry
+        blob.upload_from_string(new_content, content_type="text/plain")
+    except Exception as e:
+        print(f"⚠️ No se pudo guardar el log en GCS (Error de observabilidad): {e}")
 
 @app.on_event("startup")
 def startup_event():
-    """Este bloque se ejecuta automáticamente al encender el contenedor en la nube"""
     global session, input_name
-    
-    # Si estamos en local y el archivo ya existe, lo usa. Si no, lo descarga de GCP.
     if not os.path.exists(LOCAL_MODEL_PATH):
         if os.path.exists("model_house_pricing.onnx"):
-            # Bypass para desarrollo local rápido
             blob_target = "model_house_pricing.onnx"
         else:
             download_model_from_gcs()
@@ -51,9 +65,9 @@ def startup_event():
     try:
         session = ort.InferenceSession(blob_target)
         input_name = session.get_inputs()[0].name
-        print("🚀 Sesión de inferencia ONNX inicializada correctamente.")
+        print("🚀 Sesión de inferencia lista.")
     except Exception as e:
-        print(f"❌ No se pudo inicializar el modelo ONNX: {e}")
+        print(f"❌ Error al inicializar ONNX: {e}")
 
 class HouseFeatures(BaseModel):
     metros_cuadrados: float
@@ -61,20 +75,12 @@ class HouseFeatures(BaseModel):
     banos: float
     antiguedad: float
 
-@app.get("/")
-def read_root():
-    return {
-        "message": "API de Predicción de Viviendas - MLOps Universidad Icesi",
-        "status": "online"
-    }
-
 @app.post("/predict")
 def predict(features: HouseFeatures):
     if session is None:
-        raise HTTPException(status_code=503, detail="Modelo no cargado en el servidor.")
+        raise HTTPException(status_code=503, detail="Modelo no disponible.")
     
     try:
-        # 1. Preparar la matriz de entrada para el modelo ONNX
         input_data = np.array([[
             features.metros_cuadrados,
             features.habitaciones,
@@ -82,28 +88,19 @@ def predict(features: HouseFeatures):
             features.antiguedad
         ]], dtype=np.float32)
         
-        # 2. Ejecutar la inferencia en tiempo real
         raw_prediction = session.run(None, {input_name: input_data})
-        
-        # CORRECCIÓN AQUÍ: Usamos .item() para extraer el valor numérico puro de forma segura
         prediction_val = raw_prediction[0].item()
         
-        # 3. Observabilidad: Estructurar la traza del log
-        log_line = (
-            f"Timestamp: {datetime.now().isoformat()} | "
-            f"Input: {features.dict()} | "
-            f"Prediction: {prediction_val}\n"
-        )
+        # Estructurar la línea del log exigida por el profesor
+        log_line = f"{datetime.now().isoformat()} | Input: {features.dict()} | Prediction: {prediction_val}\n"
         
-        # En entornos serverless guardamos el log local de manera temporal 
-        # (Posteriormente se puede extender para subir paquetes de logs a la carpeta logs/)
-        print(f"📊 [LOG TRACE]: {log_line.strip()}")
+        # Guardar de forma persistente en el Bucket
+        append_log_to_gcs(log_line)
         
         return {
             "status": "success",
-            "environment": os.getenv("ENVIRONMENT", "local"),
+            "environment": ENVIRONMENT,
             "prediction": prediction_val
         }
-        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error durante la inferencia: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
