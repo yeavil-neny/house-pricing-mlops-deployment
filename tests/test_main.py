@@ -47,7 +47,7 @@ def test_model_metric_threshold():
     X_test = data[['metros_cuadrados', 'habitaciones', 'banos', 'antiguedad']].values.astype(np.float32)
     
     # 4. Ejecutar la inferencia con el Modelo ONNX descargado
-    sess = rt.InferenceSession("./model_house_pricing.onnx")
+    sess = ort.InferenceSession("./model_house_pricing.onnx")
     input_name = sess.get_inputs()[0].name
     label_name = sess.get_outputs()[0].name
     predicciones = sess.run([label_name], {input_name: X_test})[0]
