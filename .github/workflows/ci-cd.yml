@@ -1,12 +1,13 @@
 name: Continuous Integration & Deployment (GCP Dev) 🚀
 
+# El pipeline se activa automáticamente ante cualquier 'push' en la rama dev
 on:
   push:
     branches:
       - dev
 
 jobs:
-  # TRABAJO 1: Descarga dinámica y Pruebas Unitarias de Calidad
+  # TRABAJO 1: Asegurar la calidad antes de tocar la nube
   test-and-validate:
     runs-on: ubuntu-latest
     permissions:
@@ -26,7 +27,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Autenticación requerida para acceder al Bucket en la etapa de Test
       - name: Autenticar en Google Cloud con Workload Identity 🔐
         uses: google-github-actions/auth@v1
         with:
@@ -34,22 +34,22 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      # CORRECCIÓN EN TRABAJO 1: Pasamos el project_id explícitamente aquí también
       - name: Configurar gcloud CLI
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # CUMPLIMIENTO DE LA RÚBRICA: Descarga limpia de artefactos
       - name: Descargar Datos de Prueba y Modelo desde el Bucket
         run: |
-          gcloud storage cp gs://house-pricing-mlops-artifacts-dev/models/model_house_pricing.onnx /tmp/model_house_pricing.onnx
-          gcloud storage cp gs://house-pricing-mlops-artifacts-dev/test_data.csv /tmp/test_data.csv
+          gcloud storage cp gs://house-pricing-mlops-artifacts-dev/models/model_house_pricing.onnx ./model_house_pricing.onnx
 
-      # Apuntamos directamente al archivo que muestra tu VS Code
       - name: Ejecutar pruebas unitarias y de umbral de calidad (Pytest)
         run: |
           export PYTHONPATH="."
-          pytest tests/test_main.py
+          pytest tests/
 
-  # TRABAJO 2: Empaquetar y Desplegar en Cloud Run
+  # TRABAJO 2: Empaquetar y Desplegar en Cloud Run (Solo si el Trabajo 1 pasa en verde)
   build-and-deploy-gcp:
     needs: test-and-validate
     runs-on: ubuntu-latest
@@ -67,7 +67,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # CORRECCIÓN AQUÍ: Forzamos a setup-gcloud a usar explícitamente el ID del proyecto guardado
+      # CORRECCIÓN EN TRABAJO 2: Mantenemos la configuración explícita
       - name: Configurar herramientas de GCP (gcloud CLI)
         uses: google-github-actions/setup-gcloud@v1
         with:
@@ -90,4 +90,3 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars ENVIRONMENT=dev
-# Forzar ejecucion del pipeline con permisos corregidos
