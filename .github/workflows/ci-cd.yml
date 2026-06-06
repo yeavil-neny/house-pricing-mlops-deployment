@@ -57,6 +57,7 @@ jobs:
       - name: Descargar código del repositorio
         uses: actions/checkout@v3
 
+      # 1. Autenticación nativa mediante Workload Identity Federation
       - name: Autenticar en Google Cloud con Workload Identity 🔐
         uses: google-github-actions/auth@v1
         with:
@@ -64,17 +65,25 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           project_id: 'proyectomachinelearning-498323'
 
-      # Configuramos el proyecto explícito antes del empaquetado
+      # 2. DESCARGA DEL MODELO (El eslabón que faltaba para alimentar el Dockerfile)
+      # Descargamos el artefacto directamente en la raíz (.) del runner para que docker build lo encuentre
+      - name: Descargar Modelo ONNX para el Contexto de Docker 🎯
+        run: |
+          gcloud storage cp gs://house-pricing-mlops-artifacts-dev/models/model_house_pricing.onnx ./model_house_pricing.onnx
+
+      # 3. Configuración de credenciales de Docker en el entorno limpio
       - name: Configurar autenticación de Docker y Despliegue en GCP
         run: |
           gcloud config set project proyectomachinelearning-498323
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
+      # 4. Construcción utilizando el contexto local completo
       - name: Construir y Subir Imagen a Artifact Registry
         run: |
           docker build -t us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest .
           docker push us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest
 
+      # 5. Despliegue final de la API empaquetada
       - name: Desplegar endpoint en Google Cloud Run
         run: |
           gcloud run deploy house-pricing-api-dev \
