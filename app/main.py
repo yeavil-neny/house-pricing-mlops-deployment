@@ -1,33 +1,60 @@
-import os
-import time
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import onnxruntime as rt
+import onnxruntime as ort
 import numpy as np
+import os
+from datetime import datetime
+from google.cloud import storage
 
-app = FastAPI(
-    title="House Pricing Inference API",
-    description="API para la predicción de precios de vivienda usando ONNX Runtime",
-    version="1.0.0"
-)
+app = FastAPI(title="House Pricing Inference API - GCP Cloud Native")
 
-# Definir el nombre del entorno según una variable del sistema (la configuraremos en Cloud Run)
-ENV = os.getenv("ENVIRONMENT", "dev")
-LOG_FILE = f"predicciones_{ENV}.txt"
+# Configuración del entorno y almacenamiento centralizado
+BUCKET_NAME = "house-pricing-mlops-artifacts-dev"
+MODEL_BLOB_PATH = "models/model_house_pricing.onnx"
+LOCAL_MODEL_PATH = "/tmp/model_house_pricing.onnx"
 
-# Intentar cargar el modelo ONNX de forma global al arrancar la API
-# Nota: En local buscaremos el archivo en la raíz para probar, 
-# pero en producción el pipeline lo inyectará automáticamente.
-MODEL_PATH = "model_house_pricing.onnx"
+# Variables globales para el modelo
 session = None
+input_name = None
 
-if os.path.exists(MODEL_PATH):
-    session = rt.InferenceSession(MODEL_PATH)
-    print(f"✅ Modelo ONNX cargado exitosamente desde {MODEL_PATH}")
-else:
-    print(f"⚠️ Advertencia: No se encontró {MODEL_PATH}. La API iniciará, pero las predicciones fallarán hasta que el archivo esté presente.")
+def download_model_from_gcs():
+    """Descarga dinámicamente el modelo desde el Bucket de Google Cloud"""
+    try:
+        print(f"🔄 Conectando a GCP para descargar el modelo desde el bucket: {BUCKET_NAME}...")
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(MODEL_BLOB_PATH)
+        
+        # Guardar en la carpeta /tmp (estándar seguro para entornos serverless)
+        blob.download_to_filename(LOCAL_MODEL_PATH)
+        print("✅ Modelo ONNX descargado exitosamente en el entorno temporal.")
+    except Exception as e:
+        print(f"❌ Error crítico al descargar el modelo desde GCS: {e}")
+        raise e
 
-# Esquema de validación de datos de entrada (Pydantic)
+@app.on_event("startup")
+def startup_event():
+    """Este bloque se ejecuta automáticamente al encender el contenedor en la nube"""
+    global session, input_name
+    
+    # Si estamos en local y el archivo ya existe, lo usa. Si no, lo descarga de GCP.
+    if not os.path.exists(LOCAL_MODEL_PATH):
+        if os.path.exists("model_house_pricing.onnx"):
+            # Bypass para desarrollo local rápido
+            blob_target = "model_house_pricing.onnx"
+        else:
+            download_model_from_gcs()
+            blob_target = LOCAL_MODEL_PATH
+    else:
+        blob_target = LOCAL_MODEL_PATH
+
+    try:
+        session = ort.InferenceSession(blob_target)
+        input_name = session.get_inputs()[0].name
+        print("🚀 Sesión de inferencia ONNX inicializada correctamente.")
+    except Exception as e:
+        print(f"❌ No se pudo inicializar el modelo ONNX: {e}")
+
 class HouseFeatures(BaseModel):
     metros_cuadrados: float
     habitaciones: float
@@ -35,19 +62,19 @@ class HouseFeatures(BaseModel):
     antiguedad: float
 
 @app.get("/")
-def home():
+def read_root():
     return {
-        "message": f"API de Predicción de Viviendas corriendo en el entorno: [{ENV.upper()}]",
-        "model_loaded": session is not None
+        "message": "API de Predicción de Viviendas - MLOps Universidad Icesi",
+        "status": "online"
     }
 
 @app.post("/predict")
 def predict(features: HouseFeatures):
     if session is None:
-        raise HTTPException(status_code=503, detail="Modelo ONNX no disponible en el servidor.")
+        raise HTTPException(status_code=503, detail="Modelo no cargado en el servidor.")
     
     try:
-        # 1. Preparar los datos en el formato exacto que espera el ONNX ([None, 4])
+        # 1. Preparar la matriz de entrada para el modelo ONNX
         input_data = np.array([[
             features.metros_cuadrados,
             features.habitaciones,
@@ -55,29 +82,27 @@ def predict(features: HouseFeatures):
             features.antiguedad
         ]], dtype=np.float32)
         
-        # 2. Correr la inferencia en ONNX Runtime
-        # 'float_input' fue el nombre que le dimos a la entrada en la fábrica
-        input_name = session.get_inputs()[0].name
-        output_name = session.get_outputs()[0].name
+        # 2. Ejecutar la inferencia en tiempo real
+        raw_prediction = session.run(None, {input_name: input_data})
         
-        prediction = session.run([output_name], {input_name: input_data})
+        # CORRECCIÓN AQUÍ: Usamos .item() para extraer el valor numérico puro de forma segura
+        prediction_val = raw_prediction[0].item()
         
-        # CORRECCIÓN AQUÍ: Accedemos al elemento fila 0, columna 0 de la salida de ONNX
-        precio_estimado = float(prediction[0][0][0])
+        # 3. Observabilidad: Estructurar la traza del log
+        log_line = (
+            f"Timestamp: {datetime.now().isoformat()} | "
+            f"Input: {features.dict()} | "
+            f"Prediction: {prediction_val}\n"
+        )
         
-        # 3. Formatear y registrar en el log local (Requisito de Observabilidad)
-        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-        log_entry = f"[{timestamp}] Features: {input_data.tolist()} -> Predicción: ${precio_estimado:,.2f}\n"
+        # En entornos serverless guardamos el log local de manera temporal 
+        # (Posteriormente se puede extender para subir paquetes de logs a la carpeta logs/)
+        print(f"📊 [LOG TRACE]: {log_line.strip()}")
         
-               
-        with open(LOG_FILE, "a") as f:
-            f.write(log_entry)
-            
-        # 4. Retornar la respuesta al cliente
         return {
             "status": "success",
-            "environment": ENV,
-            "prediction": round(precio_estimado, 2)
+            "environment": os.getenv("ENVIRONMENT", "local"),
+            "prediction": prediction_val
         }
         
     except Exception as e:

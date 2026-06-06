@@ -6,3 +6,4 @@ numpy
 pydantic
 pytest
 httpx
+google-cloud-storage
