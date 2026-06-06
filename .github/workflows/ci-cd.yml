@@ -67,8 +67,11 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Configurar gcloud CLI
+      # CORRECCIÓN AQUÍ: Forzamos a setup-gcloud a usar explícitamente el ID del proyecto guardado
+      - name: Configurar herramientas de GCP (gcloud CLI)
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Configurar autenticación de Docker con GCP
         run: |
