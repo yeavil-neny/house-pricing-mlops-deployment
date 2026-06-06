@@ -26,26 +26,41 @@ def test_model_inference_structure():
     assert prediction[0].shape == (1, 1)
 
 def test_model_metric_threshold():
-    """Punto 2 del profesor: Probar que no existe un cambio significativo en una métrica (Umbral de Calidad)"""
-    session = ort.InferenceSession(LOCAL_MODEL_PATH)
-    input_name = session.get_inputs()[0].name
+    # 1. Cargar el dataset de prueba descargado por el pipeline
+    data = pd.read_csv("./test_data.csv")
     
-    # Leer los datos que el pipeline descargó dinámicamente desde el Bucket
-    df = pd.read_csv(LOCAL_DATA_PATH)
+    # 2. RECONSTRUCCIÓN LÓGICA DEL TARGET (Precio Real)
+    # Replicamos la fórmula matemática exacta del script de generación
+    # para inyectar la columna 'precio_real' de manera dinámica:
+    base_vivienda = 40_000_000
+    componente_m2 = data['metros_cuadrados'] * 2_500_000
+    componente_hab = data['habitaciones'] * 15_000_000
+    componente_banos = data['banos'] * 20_000_000
+    componente_antiguedad = data['antiguedad'] * 3_000_000
     
-    X_test = df[['metros_cuadrados', 'habitaciones', 'banos', 'antiguedad']].values.astype(np.float32)
-    y_true = df['precio_real'].values
+    # Reconstruimos el precio base sin el ruido aleatorio (o el valor esperado teórico)
+    # que sirve perfectamente como ground-truth para validar el umbral del modelo.
+    data['precio_real'] = base_vivienda + componente_m2 + componente_hab + componente_banos - componente_antiguedad
     
-    predictions = []
-    for row in X_test:
-        pred = session.run(None, {input_name: np.array([row])})
-        predictions.append(pred[0].item())
-        
-    # Calcular una métrica básica (ejemplo: RMSE o desviación máxima)
-    predictions = np.array(predictions)
-    mae = np.mean(np.abs(predictions - y_true))
+    # 3. Preparar los datos para el modelo ONNX
+    # Asegúrate de que las columnas vayan en el orden exacto que requiere tu modelo
+    X_test = data[['metros_cuadrados', 'habitaciones', 'banos', 'antiguedad']].values.astype(np.float32)
     
-    # Definir el umbral límite exigido por la rúbrica (ejemplo: MAE menor a 50 millones)
-    UMBRAL_MAXIMO_ERROR = 50000000
+    # 4. Ejecutar la inferencia con el Modelo ONNX descargado
+    sess = rt.InferenceSession("./model_house_pricing.onnx")
+    input_name = sess.get_inputs()[0].name
+    label_name = sess.get_outputs()[0].name
+    predicciones = sess.run([label_name], {input_name: X_test})[0]
     
-    assert mae < UBRAL_MAXIMO_ERROR, f"La métrica de calidad falló: MAE actual {mae} supera el límite {UMBRAL_MAXIMO_ERROR}"
+    # Aplanamos las predicciones en caso de que vengan en formato bidimensional
+    y_pred = predicciones.flatten()
+    y_true = data['precio_real'].values
+    
+    # 5. Calcular la métrica de calidad (Mean Absolute Error - MAE)
+    mae = np.mean(np.abs(y_true - y_pred))
+    print(f"\n[CALIDAD MLOPS] El MAE calculado del modelo es: ${mae:,.2f} COP")
+    
+    # 6. Verificación del Umbral (Ajusta el límite según los requerimientos de tu proyecto)
+    # Por ejemplo, garantizar que el error promedio sea menor a 25 millones de pesos
+    umbral_maximo = 25_000_000
+    assert mae < umbral_maximo, f"El MAE del modelo (${mae:,.2f}) supera el umbral permitido (${umbral_maximo:,.2f})"
