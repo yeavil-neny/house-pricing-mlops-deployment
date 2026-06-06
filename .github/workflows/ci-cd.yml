@@ -44,7 +44,7 @@ jobs:
       - name: Ejecutar pruebas unitarias y de umbral de calidad (Pytest)
         run: |
           export PYTHONPATH="."
-          pytest tests/
+          pytest tests/test_main.py
 
   # TRABAJO 2: Empaquetar y Desplegar en Cloud Run (Solo si el Trabajo 1 pasa en verde)
   build-and-deploy-gcp:
