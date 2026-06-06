@@ -32,12 +32,12 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: 'proyectomachinelearning-498323'
 
-      # SOLUCIÓN CRÍTICA: Descarga directa usando gcloud nativo sin pasar por el setup-gcloud problemático
+      # Descarga directa usando gcloud con el ID de proyecto explícito en texto plano
       - name: Descargar Datos de Prueba y Modelo desde el Bucket
         run: |
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud config set project proyectomachinelearning-498323
           gcloud storage cp gs://house-pricing-mlops-artifacts-dev/models/model_house_pricing.onnx ./model_house_pricing.onnx
           gcloud storage cp gs://house-pricing-mlops-artifacts-dev/test_data.csv /tmp/test_data.csv
 
@@ -62,23 +62,23 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: 'proyectomachinelearning-498323'
 
-      # En el Job 2 usamos el flujo nativo de Docker y gcloud directo
+      # Configuramos el proyecto explícito antes del empaquetado
       - name: Configurar autenticación de Docker y Despliegue en GCP
         run: |
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud config set project proyectomachinelearning-498323
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
       - name: Construir y Subir Imagen a Artifact Registry
         run: |
-          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/house-pricing-repo/api-dev:latest .
-          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/house-pricing-repo/api-dev:latest
+          docker build -t us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest .
+          docker push us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest
 
       - name: Desplegar endpoint en Google Cloud Run
         run: |
           gcloud run deploy house-pricing-api-dev \
-            --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/house-pricing-repo/api-dev:latest \
+            --image us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
