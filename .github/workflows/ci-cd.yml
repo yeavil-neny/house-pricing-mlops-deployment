@@ -83,3 +83,5 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars ENVIRONMENT=dev
+
+# Relanzamiento: Permisos WIF y mapeo OIDC actualizados con éxito
