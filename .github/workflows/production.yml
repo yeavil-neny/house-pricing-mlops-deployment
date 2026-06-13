@@ -32,10 +32,11 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           project_id: 'proyectomachinelearning-498323'
 
-      - name: Descargar Modelo desde Bucket de Producción para Pruebas
+      - name: Descargar Artefactos desde Bucket de Producción para Pruebas
         run: |
           gcloud config set project proyectomachinelearning-498323
           gcloud storage cp gs://house-pricing-mlops-artifacts-prod/models/model_house_pricing.onnx ./model_house_pricing.onnx
+          gcloud storage cp gs://house-pricing-mlops-artifacts-prod/data/test_data.csv ./test_data.csv      
 
       - name: Ejecutar pruebas unitarias (Pytest)
         run: |
