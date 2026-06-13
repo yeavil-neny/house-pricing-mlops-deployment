@@ -1,0 +1,89 @@
+name: Continuous Deployment (GCP Prod) 🚀
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v3
+
+      - name: Configurar entorno de Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Autenticar en Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          project_id: 'proyectomachinelearning-498323'
+
+      - name: Descargar Modelo desde Bucket de Producción para Pruebas
+        run: |
+          gcloud config set project proyectomachinelearning-498323
+          gcloud storage cp gs://house-pricing-mlops-artifacts-prod/models/model_house_pricing.onnx ./model_house_pricing.onnx
+
+      - name: Ejecutar pruebas unitarias (Pytest)
+        run: |
+          export PYTHONPATH="."
+          pytest tests/test_main.py
+
+  deploy-prod:
+    needs: test-and-validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v3
+
+      - name: Autenticar en Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          project_id: 'proyectomachinelearning-498323'
+
+      - name: Descargar Modelo ONNX para Empaquetar
+        run: |
+          gcloud storage cp gs://house-pricing-mlops-artifacts-prod/models/model_house_pricing.onnx ./model_house_pricing.onnx
+
+      - name: Configurar autenticación de Docker
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Construir y Subir Imagen de Producción
+        run: |
+          COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          IMAGE_BASE="us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/house-pricing-api"
+          
+          docker build -t $IMAGE_BASE:$COMMIT_SHA -t $IMAGE_BASE:prod .
+          docker push $IMAGE_BASE:$COMMIT_SHA
+          docker push $IMAGE_BASE:prod
+
+      - name: Desplegar endpoint en Google Cloud Run (PROD)
+        run: |
+          COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          IMAGE_BASE="us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/house-pricing-api"
+          
+          gcloud run deploy house-pricing-api-prod \
+            --image $IMAGE_BASE:$COMMIT_SHA \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars ENVIRONMENT=prod
