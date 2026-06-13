@@ -65,7 +65,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           project_id: 'proyectomachinelearning-498323'
 
-      # 2. DESCARGA DEL MODELO (El eslabón que faltaba para alimentar el Dockerfile)
+      # 2. DESCARGA DEL MODELO (Para alimentar el Dockerfile)
       # Descargamos el artefacto directamente en la raíz (.) del runner para que docker build lo encuentre
       - name: Descargar Modelo ONNX para el Contexto de Docker 🎯
         run: |
@@ -78,16 +78,27 @@ jobs:
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
       # 4. Construcción utilizando el contexto local completo
-      - name: Construir y Subir Imagen a Artifact Registry
+      - name: Construir y Subir Imagen de Desarrollo a Artifact Registry
         run: |
-          docker build -t us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest .
-          docker push us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest
+          # Extraer el hash corto del commit
+          COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          IMAGE_BASE="us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/house-pricing-api"
+          
+          # Construir la imagen de manera agnóstica
+          docker build -t $IMAGE_BASE:$COMMIT_SHA -t $IMAGE_BASE:dev .
+          
+          # Subir ambas etiquetas
+          docker push $IMAGE_BASE:$COMMIT_SHA
+          docker push $IMAGE_BASE:dev
 
       # 5. Despliegue final de la API empaquetada
-      - name: Desplegar endpoint en Google Cloud Run
+      - name: Desplegar endpoint en Google Cloud Run (DEV)
         run: |
+          COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          IMAGE_BASE="us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/house-pricing-api"
+          
           gcloud run deploy house-pricing-api-dev \
-            --image us-central1-docker.pkg.dev/proyectomachinelearning-498323/house-pricing-repo/api-dev:latest \
+            --image $IMAGE_BASE:$COMMIT_SHA \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
