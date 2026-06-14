@@ -198,8 +198,8 @@ Una vez que el entorno de desarrollo se encuentre estable y verificado, se reali
       git push origin main
       ```
   4. El pipeline: `.github/workflows/production.yml` tomará el control de forma aislada:
-     - Descargará los artefactos oficiales desde el bucket de producción ```text gs://house-pricing-mlops-artifacts-prod/.```
-     - Correrá los umbrales de validación sobre el conjunto de pruebas dinámico ```test_data.csv```.
+     - Descargará los artefactos oficiales desde el bucket de producción `gs://house-pricing-mlops-artifacts-prod/.`
+     - Correrá los umbrales de validación sobre el conjunto de pruebas dinámico `test_data.csv`.
      - Empaquetará la imagen inmutable inyectando el código del ```COMMIT_SHA```.
-     - Actualizará el endpoint productivo en **Cloud Run** (```text house-pricing-api-prod```) inyectando de forma inmutable la variable de entorno ```text ENVIRONMENT=prod```.
-     - A partir de ese momento, cada inferencia del usuario final quedará registrada de forma persistente en ```text gs://house-pricing-mlops-artifacts-prod/logs/predicciones_prod.txt```.
+     - Actualizará el endpoint productivo en **Cloud Run** (`house-pricing-api-prod`) inyectando de forma inmutable la variable de entorno `ENVIRONMENT=prod`.
+     - A partir de ese momento, cada inferencia del usuario final quedará registrada de forma persistente en `gs://house-pricing-mlops-artifacts-prod/logs/predicciones_prod.txt`.
