@@ -36,10 +36,10 @@ El sistema está diseñado bajo el principio de desacoplamiento de artefactos: *
 El repositorio se organiza en dos ramas estables, cada una vinculada a un entorno e infraestructura independientes en la nube:
 
 * **Rama `dev` (Desarrollo):** Dedicada a pruebas e integración de nuevas características de la aplicación o cambios estructurales del modelo.
-  * *Endpoint asociado:* `https://house-pricing-api-dev-725588313477.us-central1.run.app/docs`
+  * *Endpoint asociado:* [https://house-pricing-api-dev-725588313477.us-central1.run.app/docs](https://house-pricing-api-dev-725588313477.us-central1.run.app/docs)
   * *Logs de monitoreo:* `predicciones_dev.txt`
 * **Rama `prod` (Producción):** Entorno oficial y estable expuesto al usuario final o cliente.
-  * *Endpoint asociado:* `https://house-pricing-api-prod-725588313477.us-central1.run.app/docs#/default/predict_predict_post`
+  * *Endpoint asociado:* [https://house-pricing-api-prod-725588313477.us-central1.run.app/docs](https://house-pricing-api-prod-725588313477.us-central1.run.app/docs)
   * *Logs de monitoreo:* `predicciones_prod.txt`
 
 
