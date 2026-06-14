@@ -4,10 +4,6 @@ Sistema de despliegue automatizado corporativo (CI/CD) basado en GitOps utilizan
 
 Este repositorio contiene el sistema de despliegue automático para la aplicación de predicción de precios de vivienda. El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) que empaqueta la solución de forma agnóstica en un contenedor Docker y la despliega de forma serverless en la nube, asegurando entornos aislados de desarrollo y producción.
 
-> 📌 **Nota de Arquitectura:** El ciclo de vida de experimentación, preprocesamiento y entrenamiento del modelo se encuentra desacoplado en el repositorio hermano: `house-pricing-ml-pipeline`.
-
----
-
 ## Arquitectura del Sistema y Desacoplamiento
 
 El sistema está diseñado bajo el principio de desacoplamiento de artefactos: **separación estricta de código y artefactos de datos**
@@ -15,6 +11,12 @@ El sistema está diseñado bajo el principio de desacoplamiento de artefactos: *
 * **Desacoplamiento de Artefactos:** Ni el archivo binario del modelo (`model_house_pricing.onnx`) ni los datos de prueba (`test_data.csv`) residen en este repositorio de código. Se extraen en tiempo de ejecución de manera segura desde un almacenamiento en la nube (Bucket) de Google Cloud Storage.
 * **API de Servicio:** Desarrollado con **FastAPI** y **Uvicorn**, exponiendo endpoints REST autodeclarativos y cargando la sesión de predicción optimizada con `onnxruntime` a través del modelo ONNX en memoria para resolver inferencias en tiempo real.
 * **Observabilidad (Auditoría):** Cada petición procesada por los endpoints escribe de forma persistente los registros de las predicciones en archivos de log (`.txt`) dentro del bucket para su posterior monitoreo, auditoría y evaluación de data drift.
+
+> 📌 **Nota de Arquitectura del Ecosistema MLOps:** El diseño del sistema se fundamenta en el **desacoplamiento total entre el ciclo de vida del modelo y el ciclo de vida de la aplicación de inferencia**, distribuyéndose en dos repositorios independientes:
+> 1. **`house-pricing-ml-pipeline`**: Repositorio de Ingeniería de Datos y Modelamiento. Contiene el código de generación de datos sintéticos (`generate_data.py`), entrenamiento (`train.py`) y la exportación del artefacto final en formato abierto ONNX (`model_house_pricing.onnx`) con un rendimiento validado de $R^2 = 0.97$.
+> 2. **`house-pricing-mlops-deployment`** *(Este repositorio)*: Repositorio de despliegue y servicio enfocado en la infraestructura y la API de inferencia en tiempo real.
+
+---
 
 
 ## Estrategia de Ramas y Endpoints
