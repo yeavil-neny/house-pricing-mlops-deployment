@@ -17,31 +17,33 @@ El sistema está diseñado bajo el principio de desacoplamiento de artefactos: *
 > 1. **`house-pricing-ml-pipeline`**: Repositorio de Ingeniería de Datos y Modelamiento. Contiene el código de generación de datos sintéticos (`generate_data.py`), entrenamiento (`train.py`) y la exportación del artefacto final en formato abierto ONNX (`model_house_pricing.onnx`) con un rendimiento validado de $R^2 = 0.97$.
 > 2. **`house-pricing-mlops-deployment`** *(Este repositorio)*: Repositorio de despliegue y servicio enfocado en la infraestructura y la API de inferencia en tiempo real.
 
-┌─────────────────────────────────┐      ┌──────────────────────────────────────┐
-│  house-pricing-ml-pipeline     │      │   house-pricing-mlops-deployment     │
-│  (Entrenamiento y Artefacto)    │      │         (Servicio de API)            │
-└────────────────┬────────────────┘      └──────────────────┬───────────────────┘
-│                                          │
-▼ (Sube Artefactos)                        ▼ (Gated Trigger por Git)
-┌─────────────────────────────┐            ┌─────────────────────────────┐
-│    Google Cloud Storage     │            │       GitHub Actions        │
-│  (Bucket de Almacenamiento) │            │     (Pipeline CI/CD)        │
-└─────────────┬───────────────┘            └─────────────┬───────────────┘
-│                                          │
-│ (Descarga dinámica en Test/Build)        │
-└───────────────────► ◄────────────────────┘
-│
-▼
-┌──────────────────────────────┐
-│    Artifact Registry (GCP)   │
-│  (Imágenes Docker Inmutables)│
-└──────────────┬───────────────┘
-│
-▼ (Despliegue Serverless)
-┌──────────────────────────────┐
-│      Google Cloud Run        │
-│   (EndPoints DEV / PROD)     │
-└──────────────────────────────┘
+flowchart TD
+    %% Definición de Nodos
+    A["**house-pricing-ml-pipeline**<br>(Entrenamiento y Artefacto)"]
+    B["**house-pricing-mlops-deployment**<br>(Servicio de API)"]
+    C["**Google Cloud Storage**<br>(Bucket de Almacenamiento)"]
+    D["**GitHub Actions**<br>(Pipeline CI/CD)"]
+    E["**Artifact Registry (GCP)**<br>(Imágenes Docker Inmutables)"]
+    F["**Google Cloud Run**<br>(EndPoints DEV / PROD)"]
+    
+    %% Nodo invisible para manejar la convergencia de las flechas intermedias
+    join(( ))
+    style join fill:none,stroke:none,width:0px,height:0px
+
+    %% Flujos y Conexiones
+    A -->|"(Sube Artefactos)"| C
+    B -->|"(Gated Trigger por Git)"| D
+    
+    %% Conexiones hacia el punto de encuentro
+    C -->|"(Descarga dinámica en Test/Build)"| join
+    D --> join
+    
+    %% Flujo hacia abajo
+    join --> E
+    E -->|"(Despliegue Serverless)"| F
+
+    %% Estilos opcionales para mejorar la legibilidad (Bordes y Fondo)
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px;
 
 
 ---
