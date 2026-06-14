@@ -2,8 +2,8 @@
 
 El desarrollo, diseño de arquitectura MLOps e implementación de este ecosistema automatizado fue realizado por:
 
-* **Yenny Alexandra Villarreal Suaza** — *Ingeniera de Sistemas / MLOps & Cloud Infrastructure*
-* **Cristian Humberto Yepes Marín** — *Ingeniero de Sistemas / Data & ML Engineer*
+* **Yenny Alexandra Villarreal Suaza** — *cod. A00417016*
+* **Cristian Humberto Yepes Marín** — *cod. A00417015*
 
 ---
 
