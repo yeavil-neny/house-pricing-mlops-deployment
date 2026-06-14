@@ -79,6 +79,8 @@ Para asegurar un diseño robusto y escalable, la solución implementa los siguie
 * **IV. Procesos (Process):** La API de inferencia se comporta como un proceso sin estado (*stateless*). No retiene datos locales en el contenedor, permitiendo el auto-escalado horizontal inmediato de Google Cloud Run desde 0 hasta N instancias según la demanda de peticiones.
 * **V. Historiales de ejecución (Logs):** Los logs de la aplicación son tratados como flujos de eventos continuos. Cada inferencia se procesa y se escribe de forma desacoplada y persistente en archivos de auditoría (`predicciones_dev.txt` y `predicciones_prod.txt`) directamente sobre Google Cloud Storage para habilitar la trazabilidad y detectar posibles derivas de datos (*Data Drift*).
 
+
+---
 ## Estructura del Repositorio Real
 
 ```text
@@ -97,5 +99,107 @@ house-pricing-mlops-deployment/
 ├── LICENSE                    # Licencia del proyecto
 ├── README.md                  # Documentación técnica del sistema
 └── requirements.txt           # Dependencias estrictas del entorno de ejecución
+```
 
-```text
+
+## Guía de Onboarding (Ejecución del Proyecto)
+
+Esta sección describe los pasos necesarios para clonar, configurar y ejecutar la API de inferencia tanto en un entorno local de desarrollo como en la infraestructura serverless de la nube.
+
+### Prerrequisitos Mínimos
+* **Python 3.11** instalado localmente.
+* **Docker Desktop** activo (para pruebas de contenedores).
+* **Google Cloud SDK (gcloud CLI)** instalado e inicializado.
+* Cuenta de servicio con permisos sobre los buckets de GCP (`Storage Object Viewer` y `Storage Object Creator`).
+
+---
+
+### 1. Ejecución en Entorno Local (Desarrollo)
+
+Para realizar pruebas ágiles, depuración de código o flujos offline, sigue estos pasos:
+
+#### Paso 1.1: Clonar el repositorio y preparar el entorno
+```bash
+# Clonar el proyecto de despliegue
+git clone [https://github.com/tu-usuario/house-pricing-mlops-deployment.git](https://github.com/tu-usuario/house-pricing-mlops-deployment.git)
+cd house-pricing-mlops-deployment
+
+# Crear y activar un entorno virtual de Python
+python -m venv venv
+source venv/bin/activate  # En Windows usa: venv\Scripts\activate
+
+# Instalar las dependencias del proyecto
+pip install -r requirements.txt
+```
+
+#### Paso 1.2: Ubicar el artefacto del modelo
+Para desarrollo offline local, el script app/main.py cuenta con un mecanismo de fallback inteligente. Coloca una copia del archivo del modelo en la raíz del repositorio:
+```bash
+Ruta: ./model_house_pricing.onnx
+```
+
+#### Paso 1.3: Lanzar el servidor de FastAPI
+Ejecuta el servidor web asíncronamente a través de Uvicorn inyectando la variable de entorno de desarrollo:
+```bash
+export ENVIRONMENT=dev
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### Paso 1.4: Probar la suite de pruebas unitarias localmente
+```bash
+export PYTHONPATH="."
+pytest tests/test_main.py
+```
+---
+
+### 2. Ejecución Local empaquetada con Docker
+Si deseas certificar el comportamiento exacto del contenedor antes de subirlo al registro de la nube:
+```bash
+# 1. Construir la imagen Docker local
+docker build -t house-pricing-api:local .
+
+# 2. Correr el contenedor mapeando los puertos y pasando las credenciales de GCP
+docker run -p 8080:8080 \
+  -e ENVIRONMENT=dev \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/keys/gcp-key.json \
+  -v ~/.config/gcloud:/tmp/keys \
+  house-pricing-api:local
+```
+  - Acceso local por contenedor: ```text http://localhost:8080/docs```
+
+### 3. Ejecución y Despliegue en la Nube (Google Cloud Platform)
+El despliegue en la nube está completamente automatizado a través de GitOps con GitHub Actions, por lo que no requiere comandos manuales repetitivos en producción. El flujo operativo se gestiona de la siguiente manera:
+
+#### Flujo de Promoción a Desarrollo (Ambiente DEV)
+  1. Realiza tus modificaciones de código en tu máquina local.
+  2. Envía los cambios a la rama de desarrollo:
+      ```bash
+      git add .
+      git commit -m "feat: optimización de lógica de logs"
+      git push origin dev
+      ```
+  3. El pipeline: ```text .github/workflows/ci-cd.yml``` se activará automáticamente:
+     - Descargará el modelo desde ```text gs://house-pricing-mlops-artifacts-dev/.```
+     - Ejecutará ```text pytest```.
+     - Compilará la imagen y la enviará a **Artifact Registry**.
+     - Actualizará de forma serverless el servicio **Cloud Run** (```text house-pricing-api-dev```).
+
+#### Flujo de Promoción a Producción (Ambiente PROD)
+Una vez que el entorno de desarrollo se encuentre estable y verificado, se realiza la promoción a producción mediante la fusión hacia la rama principal:
+      ```bash
+      # Cambiar a la rama principal y sincronizar
+      git checkout main
+      git pull origin main
+      
+      # Fusionar los cambios aprobados desde desarrollo
+      git merge dev
+      
+      # Disparar el pipeline de producción en la nube
+      git push origin main
+      ```
+  4. El pipeline: ```text .github/workflows/production.yml``` tomará el control de forma aislada:
+     - Descargará los artefactos oficiales desde el bucket de producción ```text gs://house-pricing-mlops-artifacts-prod/.```
+     - Correrá los umbrales de validación sobre el conjunto de pruebas dinámico ```test_data.csv```.
+     - Empaquetará la imagen inmutable inyectando el código del ```COMMIT_SHA```.
+     - Actualizará el endpoint productivo en **Cloud Run** (```text house-pricing-api-prod```) inyectando de forma inmutable la variable de entorno ```text ENVIRONMENT=prod```.
+     - A partir de ese momento, cada inferencia del usuario final quedará registrada de forma persistente en ```text gs://house-pricing-mlops-artifacts-prod/logs/predicciones_prod.txt```.
