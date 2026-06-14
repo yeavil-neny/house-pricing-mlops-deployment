@@ -4,6 +4,8 @@ Sistema de despliegue automatizado corporativo (CI/CD) basado en GitOps utilizan
 
 Este repositorio contiene el sistema de despliegue automático para la aplicación de predicción de precios de vivienda. El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) que empaqueta la solución de forma agnóstica en un contenedor Docker y la despliega de forma serverless en la nube, asegurando entornos aislados de desarrollo y producción.
 
+---
+
 
 ## Arquitectura del Sistema y Desacoplamiento
 
@@ -61,3 +63,13 @@ Cualquier evento de `push` o `merge` en las ramas `dev` o `prod` activa de forma
   * *Cloud Storage* (Almacenamiento de artefactos y logs)
   * *Artifact Registry* (Registro de imágenes Docker)
   * *Cloud Run* (Servicio de cómputo serverless para endpoints)
+
+## Alineación con Estándares de la Industria (Twelve-Factor App)
+
+Para asegurar un diseño robusto y escalable, la solución implementa los siguientes factores de diseño:
+
+* **I. Código Base (Codebase):** Un único repositorio rastreado en control de versiones para el despliegue, mapeado hacia múltiples entornos mediante estrategias de ramificación eficientes (`dev` y `main`).
+* **II. Configuraciones (Config):** La aplicación no almacena credenciales ni rutas estáticas en código duro. El entorno (`ENVIRONMENT`) se inyecta dinámicamente en tiempo de ejecución en Cloud Run, y la autenticación perimetral se resuelve de forma segura mediante claves efímeras con *Workload Identity Federation* en GitHub Actions, eliminando el uso de archivos JSON de claves de GCP.
+* **III. Construcción, Distribución, Ejecución (Build, Release, Run):** Separación estricta del flujo. El pipeline de GitHub genera una fase de construcción (*Build*) inmutable mediante Docker, la empaqueta de forma versionada usando el `COMMIT_SHA` en Artifact Registry (*Release*) y la ejecuta de forma serverless en Cloud Run (*Run*).
+* **IV. Procesos (Process):** La API de inferencia se comporta como un proceso sin estado (*stateless*). No retiene datos locales en el contenedor, permitiendo el auto-escalado horizontal inmediato de Google Cloud Run desde 0 hasta N instancias según la demanda de peticiones.
+* **V. Historiales de ejecución (Logs):** Los logs de la aplicación son tratados como flujos de eventos continuos. Cada inferencia se procesa y se escribe de forma desacoplada y persistente en archivos de auditoría (`predicciones_dev.txt` y `predicciones_prod.txt`) directamente sobre Google Cloud Storage para habilitar la trazabilidad y detectar posibles derivas de datos (*Data Drift*).
