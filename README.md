@@ -1,38 +1,24 @@
 # Proyecto Final MLOps House Pricing MLOps - Deployment (CD Pipeline) 🚀
 
-[![Continuous Integration & Deployment (GCP Dev)]([https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions/workflows/ci-cd.yml/badge.badge.svg)](https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions](https://house-pricing-api-dev-725588313477.us-central1.run.app/docs))
-[![Continuous Deployment (GCP Prod)]([https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions/workflows/production.yml/badge.svg)](https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions](https://house-pricing-api-prod-725588313477.us-central1.run.app/docs))
+https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions](https://house-pricing-api-dev-725588313477.us-central1.run.app/docs
+https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions/workflows/production.yml/badge.svg)](https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions](https://house-pricing-api-prod-725588313477.us-central1.run.app/docs
 
 Sistema de despliegue automatizado corporativo (CI/CD) basado en GitOps utilizando **GitHub Actions** y **Google Cloud Run** para un modelo de predicción de precios de vivienda optimizado en formato **ONNX**. 
 
-Este repositorio materializa la capa de servicio y entrega continua, implementando un pipeline dinámico que empaqueta la solución de forma agnóstica mediante contenedores Docker, garantizando un aislamiento absoluto entre los entornos de Desarrollo y Producción bajo los estándares de la metodología *Twelve-Factor App*.
+Este repositorio contiene el sistema de despliegue automático para la aplicación de predicción de precios de vivienda. El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) que empaqueta la solución de forma agnóstica en un contenedor Docker y la despliega de forma serverless en la nube, asegurando entornos aislados de desarrollo y producción.
 
 > 📌 **Nota de Arquitectura:** El ciclo de vida de experimentación, preprocesamiento y entrenamiento del modelo se encuentra desacoplado en el repositorio hermano: `house-pricing-ml-pipeline`.
 
 ---
 
-## 🏗️ Arquitectura del Sistema y Desacoplamiento
+## Arquitectura del Sistema y Desacoplamiento
 
-El ecosistema se rige bajo el principio de **separación estricta de código y artefactos de datos**:
+El sistema está diseñado bajo el principio de desacoplamiento de artefactos: **separación estricta de código y artefactos de datos**
 
-* **Desacoplamiento de Artefactos:** Ni el archivo binario del modelo (`model_house_pricing.onnx`) ni los sets de validación residen en este repositorio de código. Se extraen en tiempo de ejecución de manera segura desde Google Cloud Storage.
-* **Microservicio de Inferencia:** Desarrollado con **FastAPI** y **Uvicorn**, exponiendo endpoints REST autodeclarativos y cargando la sesión de inferencia optimizada con `onnxruntime`.
-* **Observabilidad Pasiva (Auditoría):** Cada llamada HTTP POST escribe de manera persistente, concurrente y asíncrona una nueva línea en un log centralizado en la nube para auditoría y monitoreo de data drift.
+* **Desacoplamiento de Artefactos:** Ni el archivo binario del modelo (`model_house_pricing.onnx`) ni los datos de prueba (`test_data.csv`) residen en este repositorio de código. Se extraen en tiempo de ejecución de manera segura desde un almacenamiento en la nube (Bucket) de Google Cloud Storage.
+* **API de Servicio:** Desarrollado con **FastAPI** y **Uvicorn**, exponiendo endpoints REST autodeclarativos y cargando la sesión de predicción optimizada con `onnxruntime` a través del modelo ONNX en memoria para resolver inferencias en tiempo real.
+* **Observabilidad (Auditoría):** Cada petición procesada por los endpoints escribe de forma persistente los registros de las predicciones en archivos de log (`.txt`) dentro del bucket para su posterior monitoreo, auditoría y evaluación de data drift.
 
-----
-
-
-
-
-# House Pricing MLOps Deployment (CD Pipeline): house-pricing-mlops-deployment
-
-Sistema de despliegue automatizado (CI/CD) con GitHub Actions y Cloud Run para un modelo de predicción de precios de vivienda en formato ONNX. Este repositorio contiene el sistema de despliegue automático para la aplicación de predicción de precios de vivienda. El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) que empaqueta la solución en un contenedor Docker y la despliega de forma serverless en la nube, asegurando entornos aislados de desarrollo y producción.
-
-## Arquitectura del Sistema
-El sistema está diseñado bajo el principio de desacoplamiento de artefactos:
-1. **Modelo & Datos Externos:** El archivo del modelo (`model_house_pricing.onnx`) y los datos de prueba (`test_data.csv`) no residen en este repositorio; se extraen dinámicamente desde un almacenamiento en la nube (Bucket) durante la ejecución del pipeline.
-2. **API de Servicio:** Construida sobre **FastAPI**, encargada de exponer el endpoint de predicción y cargar el modelo ONNX en memoria para resolver inferencias en tiempo real.
-3. **Observabilidad:** Cada petición procesada por los endpoints escribe de forma persistente los registros de las predicciones en archivos de log (`.txt`) dentro del bucket para su posterior monitoreo.
 
 ## Estrategia de Ramas y Endpoints
 El repositorio se organiza en dos ramas estables, cada una vinculada a un entorno e infraestructura independientes en la nube:
