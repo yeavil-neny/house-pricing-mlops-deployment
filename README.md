@@ -185,8 +185,7 @@ El despliegue en la nube está completamente automatizado a través de GitOps co
      - Actualizará de forma serverless el servicio **Cloud Run** (`house-pricing-api-dev`).
 
 #### Flujo de Promoción a Producción (Ambiente PROD)
-Una vez que el entorno de desarrollo se encuentre estable y verificado, se realiza la promoción a producción mediante la fusión hacia la rama principal:
-
+Una vez que el entorno de desarrollo se encuentre estable y verificado, se realiza la promoción a producción mediante la fusión hacia la rama principal:  
       ```bash      
       # Cambiar a la rama principal y sincronizar
       git checkout main
@@ -198,7 +197,7 @@ Una vez que el entorno de desarrollo se encuentre estable y verificado, se reali
       # Disparar el pipeline de producción en la nube
       git push origin main
       ```
-  4. El pipeline: ```text .github/workflows/production.yml``` tomará el control de forma aislada:
+  4. El pipeline: `.github/workflows/production.yml` tomará el control de forma aislada:
      - Descargará los artefactos oficiales desde el bucket de producción ```text gs://house-pricing-mlops-artifacts-prod/.```
      - Correrá los umbrales de validación sobre el conjunto de pruebas dinámico ```test_data.csv```.
      - Empaquetará la imagen inmutable inyectando el código del ```COMMIT_SHA```.
