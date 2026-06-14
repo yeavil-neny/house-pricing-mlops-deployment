@@ -1,4 +1,4 @@
-# Proyecto Final MLOps House Pricing MLOps - Deployment (CD Pipeline) 🚀
+# Proyecto Final MLOps - House Pricing MLOps Deployment (CD Pipeline) 🚀
 
 Sistema de despliegue automatizado corporativo (CI/CD) basado en GitOps utilizando **GitHub Actions** y **Google Cloud Run** para un modelo de predicción de precios de vivienda optimizado en formato **ONNX**. 
 
