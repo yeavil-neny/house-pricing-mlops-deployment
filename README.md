@@ -4,6 +4,33 @@ Sistema de despliegue automatizado corporativo (CI/CD) basado en GitOps utilizan
 
 Este repositorio contiene el sistema de despliegue automático para la aplicación de predicción de precios de vivienda. El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) que empaqueta la solución de forma agnóstica en un contenedor Docker y la despliega de forma serverless en la nube, asegurando entornos aislados de desarrollo y producción.
 
+┌─────────────────────────────────┐      ┌──────────────────────────────────────┐
+│  house-pricing-ml-pipeline     │      │   house-pricing-mlops-deployment     │
+│  (Entrenamiento y Artefacto)    │      │         (Servicio de API)            │
+└────────────────┬────────────────┘      └──────────────────┬───────────────────┘
+│                                          │
+▼ (Sube Artefactos)                        ▼ (Gated Trigger por Git)
+┌─────────────────────────────┐            ┌─────────────────────────────┐
+│    Google Cloud Storage     │            │       GitHub Actions        │
+│  (Bucket de Almacenamiento) │            │     (Pipeline CI/CD)        │
+└─────────────┬───────────────┘            └─────────────┬───────────────┘
+│                                          │
+│ (Descarga dinámica en Test/Build)        │
+└───────────────────► ◄────────────────────┘
+│
+▼
+┌──────────────────────────────┐
+│    Artifact Registry (GCP)   │
+│  (Imágenes Docker Inmutables)│
+└──────────────┬───────────────┘
+│
+▼ (Despliegue Serverless)
+┌──────────────────────────────┐
+│      Google Cloud Run        │
+│   (EndPoints DEV / PROD)     │
+└──────────────────────────────┘
+
+
 ## Arquitectura del Sistema y Desacoplamiento
 
 El sistema está diseñado bajo el principio de desacoplamiento de artefactos: **separación estricta de código y artefactos de datos**
