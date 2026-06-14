@@ -186,7 +186,7 @@ El despliegue en la nube está completamente automatizado a través de GitOps co
 
 #### Flujo de Promoción a Producción (Ambiente PROD)
 Una vez que el entorno de desarrollo se encuentre estable y verificado, se realiza la promoción a producción mediante la fusión hacia la rama principal:  
-      ```bash      
+      ```bash   
       # Cambiar a la rama principal y sincronizar
       git checkout main
       git pull origin main
