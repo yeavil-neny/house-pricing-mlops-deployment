@@ -165,7 +165,7 @@ docker run -p 8080:8080 \
   -v ~/.config/gcloud:/tmp/keys \
   house-pricing-api:local
 ```
-  - Acceso local por contenedor: ```text http://localhost:8080/docs```
+  - Acceso local por contenedor: ` http://localhost:8080/docs`
 
 ### 3. Ejecución y Despliegue en la Nube (Google Cloud Platform)
 El despliegue en la nube está completamente automatizado a través de GitOps con GitHub Actions, por lo que no requiere comandos manuales repetitivos en producción. El flujo operativo se gestiona de la siguiente manera:
@@ -178,9 +178,9 @@ El despliegue en la nube está completamente automatizado a través de GitOps co
       git commit -m "feat: optimización de lógica de logs"
       git push origin dev
       ```
-  3. El pipeline: ```text .github/workflows/ci-cd.yml``` se activará automáticamente:
+  3. El pipeline: ` .github/workflows/ci-cd.yml` se activará automáticamente:
      - Descargará el modelo desde ```text gs://house-pricing-mlops-artifacts-dev/.```
-     - Ejecutará ```text pytest```.
+     - Ejecutará ` pytest`.
      - Compilará la imagen y la enviará a **Artifact Registry**.
      - Actualizará de forma serverless el servicio **Cloud Run** (```text house-pricing-api-dev```).
 
