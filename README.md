@@ -165,7 +165,7 @@ docker run -p 8080:8080 \
   -v ~/.config/gcloud:/tmp/keys \
   house-pricing-api:local
 ```
-  - Acceso local por contenedor: ` http://localhost:8080/docs`
+  - Acceso local por contenedor: `http://localhost:8080/docs`
 
 ### 3. Ejecución y Despliegue en la Nube (Google Cloud Platform)
 El despliegue en la nube está completamente automatizado a través de GitOps con GitHub Actions, por lo que no requiere comandos manuales repetitivos en producción. El flujo operativo se gestiona de la siguiente manera:
@@ -178,15 +178,16 @@ El despliegue en la nube está completamente automatizado a través de GitOps co
       git commit -m "feat: optimización de lógica de logs"
       git push origin dev
       ```
-  3. El pipeline: ` .github/workflows/ci-cd.yml` se activará automáticamente:
-     - Descargará el modelo desde ```text gs://house-pricing-mlops-artifacts-dev/.```
-     - Ejecutará ` pytest`.
+  3. El pipeline: `.github/workflows/ci-cd.yml` se activará automáticamente:
+     - Descargará el modelo desde `gs://house-pricing-mlops-artifacts-dev/.`
+     - Ejecutará `pytest`.
      - Compilará la imagen y la enviará a **Artifact Registry**.
-     - Actualizará de forma serverless el servicio **Cloud Run** (```text house-pricing-api-dev```).
+     - Actualizará de forma serverless el servicio **Cloud Run** (`house-pricing-api-dev`).
 
 #### Flujo de Promoción a Producción (Ambiente PROD)
 Una vez que el entorno de desarrollo se encuentre estable y verificado, se realiza la promoción a producción mediante la fusión hacia la rama principal:
       ```bash
+      
       # Cambiar a la rama principal y sincronizar
       git checkout main
       git pull origin main
