@@ -1,8 +1,5 @@
 # Proyecto Final MLOps House Pricing MLOps - Deployment (CD Pipeline) 🚀
 
-https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions](https://house-pricing-api-dev-725588313477.us-central1.run.app/docs
-https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions/workflows/production.yml/badge.svg)](https://github.com/YennyVillarreal/house-pricing-mlops-deployment/actions](https://house-pricing-api-prod-725588313477.us-central1.run.app/docs
-
 Sistema de despliegue automatizado corporativo (CI/CD) basado en GitOps utilizando **GitHub Actions** y **Google Cloud Run** para un modelo de predicción de precios de vivienda optimizado en formato **ONNX**. 
 
 Este repositorio contiene el sistema de despliegue automático para la aplicación de predicción de precios de vivienda. El proyecto implementa un pipeline de Integración y Despliegue Continuo (CI/CD) que empaqueta la solución de forma agnóstica en un contenedor Docker y la despliega de forma serverless en la nube, asegurando entornos aislados de desarrollo y producción.
