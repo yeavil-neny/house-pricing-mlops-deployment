@@ -12,7 +12,7 @@ from google.cloud import storage
 ENVIRONMENT = os.getenv("ENVIRONMENT", "dev").lower()
 
 # Título dinámico para diferenciar los ambientes en /docs
-APP_TITLE = f"House Pricing Inference API - MLOps ({ENVIRONMENT.upper()})"
+APP_TITLE = f"House Pricing Inference API - MLOps V2.0 ({ENVIRONMENT.upper()})"
 app = FastAPI(title=APP_TITLE)
 
 # Construcción dinámica y agnóstica de infraestructura de almacenamiento (Twelve-Factor App)
